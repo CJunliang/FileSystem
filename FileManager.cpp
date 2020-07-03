@@ -51,14 +51,17 @@ int main() {
             case LS:
                 ls();
                 break;
-            case OPEN:
+/*            case OPEN:
                 open();
-                break;
+                break;*/
             case READ:
                 read();
                 break;
             case WRITE:
                 write();
+                break;
+            case RENAME:
+                rename();
                 break;
             case ERROR:
             default:

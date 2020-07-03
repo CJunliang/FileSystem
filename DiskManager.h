@@ -30,7 +30,7 @@ typedef struct INODE {
     unsigned int dbInDirBlock;  /*双重间接地址*/
     unsigned int triInDirBlock; /*三重间接地址*/
     unsigned char fill[23];     /*用来填充inode，无实际作用*/
-    unsigned char attribute;    /*0文件，1文件夹*/
+    bool attribute;    /*0文件，1文件夹*/
 } Inode;
 
 typedef struct SUPERBLOCK {
@@ -111,6 +111,7 @@ void blockFree(unsigned int num);
 void load();
 
 /*初始化inode*/
-void initInode(unsigned int index, unsigned char attribute);
+void initInode(unsigned int index, bool attribute);
 
+void exitSys();
 #endif //FILESYSTEM_DISKMANAGER_H

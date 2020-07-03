@@ -20,10 +20,10 @@ Group *group;
 /*当前目录的inode编号*/
 unsigned int curInodeIndex;
 
-void allocMemory() {
-    int shmId;
-    void *shareMemory;
+static int shmId;
+static void *shareMemory;
 
+void allocMemory() {
     /*获取key值*/
     key_t key = ftok("./DiskManager.cpp", 100);
     /*创建共享内存*/
@@ -38,7 +38,7 @@ void allocMemory() {
         perror("shmat failed");
         exit(EXIT_FAILURE);
     }
-    /*设置共享内存并让使用程序次数加1*/
+    /*设置共享内存*/
     shmSt = (ShareMemoryStruct *) shareMemory;
     if (!shmSt->isInit)
         diskInit();
@@ -46,7 +46,7 @@ void allocMemory() {
 }
 
 /*初始化inode*/
-void initInode(unsigned int index, unsigned char attribute) {
+void initInode(unsigned int index, bool attribute) {
     Inode *node = &inode[index];
     node->size = 0;
     node->linkCount = 0;
@@ -115,6 +115,8 @@ void blockFree(unsigned int num) {
 void diskInit() {
     unsigned int i, j;
 
+    shmSt->isInit = true;
+
     baseAddr = reinterpret_cast<unsigned char *>(&shmSt->shm);
     printf("\033[33mLoading FileSystem...\033[0m\n");
     superBlock = (SuperBlock *) baseAddr;
@@ -156,7 +158,7 @@ void diskInit() {
     inode = (Inode *) getBlockAddr(13);
     curInodeIndex = superBlock->rootInode;
     superBlock->mtime = time(nullptr);
-    initInode(superBlock->rootInode, 1);
+    initInode(superBlock->rootInode, true);
     printf("\033[32mFileSystem Created!\033[0m\n");
 }
 
@@ -168,4 +170,15 @@ void load() {
     inode = (Inode *) getBlockAddr(13);
     curInodeIndex = superBlock->rootInode;
     printf("\033[32mFileSystem Loaded!\033[0m\n");
+}
+
+void exitSys() {
+    if (shmdt(shareMemory) < 0) {
+        perror("shmdt fail!\n");
+        exit(1);
+    }
+    if (shmctl(shmId, IPC_RMID, 0) < 0) {
+        perror("shmctl fail!\n");
+        exit(1);
+    }
 }

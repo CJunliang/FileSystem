@@ -14,7 +14,7 @@ typedef struct FILEOPEN {
     pid_t pid;
 } File;
 /*文件*/
-static std::vector<File> files;
+static std::vector<File> filesList;
 /*当前路径*/
 static std::string path;
 /*存储命令参数*/
@@ -40,12 +40,18 @@ void read();
 
 void write();
 
-void open();
-
 void ls();
-
+void rename();
 void createNewFile(Inode *node, char *name, bool attribute);
 
 std::vector<std::string> split(const std::string &str, const std::string &delimiter);
+
+void open(char *name, char op, Inode *inode);
+
+void close(char *name);
+
+void doAppendWrite(Inode *node);
+
+void doReWrite(Inode *node);
 
 #endif //FILESYSTEM_FILEOPERATE_H
