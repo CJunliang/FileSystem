@@ -5,13 +5,15 @@
 #ifndef FILESYSTEM_FILEMANAGER_H
 #define FILESYSTEM_FILEMANAGER_H
 
+#include "FileOperate.h"
+
 #define MAXCOMMAND 11
 
 typedef enum {
     CD, MKDIR, RMDIR, TOUCH, RM, PWD, LS, EXIT, OPEN, READ, WRITE, ERROR
 } CommandEnum;
 
-static struct {
+struct {
     std::string str;
     CommandEnum command;
 } Command[MAXCOMMAND] = {{"cd",    CD},

@@ -1,7 +1,6 @@
 //
 // Created by liang on 2020/6/11.
 //
-
 #ifndef FILESYSTEM_DISKMANAGER_H
 #define FILESYSTEM_DISKMANAGER_H
 
@@ -44,6 +43,8 @@ typedef struct SUPERBLOCK {
     unsigned int blockAmt;          /*整个文件系统的数据块数*/
     unsigned int freeBlockAmt;      /*空闲块数目*/
     unsigned int blocksPerGroup;    /*每一个块组管理的逻辑块的数量*/
+    unsigned int fileIndexPerBlock; /*每块所包含的文件索引个数*/
+    unsigned int fileIndexSize;     /*文件索引的大小*/
     unsigned int rootInode;         /*根目录所在的inode*/
 //    unsigned int inodesPerGroup;  /*每一个块组管理的逻辑块的数量*/
     unsigned int inode[3096];       /*inode节点的个数*/
@@ -74,17 +75,17 @@ typedef struct GROUP {
 } Group;
 
 /*共享内存的区域*/
-static ShareMemoryStruct *shmSt;
+extern ShareMemoryStruct *shmSt;
 /*共享内存的初始地址*/
-static unsigned char *baseAddr;
+extern unsigned char *baseAddr;
 /*超级块的空间地址*/
-static SuperBlock *superBlock;
+extern SuperBlock *superBlock;
 /*inode开始的地址*/
-static Inode *inode;
+extern Inode *inode;
 /*此时正在使用的group*/
-static Group *group;
+extern Group *group;
 /*当前目录的inode编号*/
-static unsigned int curInode;
+extern unsigned int curInodeIndex;
 
 /*创建共享内存*/
 void allocMemory();
@@ -108,4 +109,8 @@ unsigned int blockAlloc();
 void blockFree(unsigned int num);
 
 void load();
+
+/*初始化inode*/
+void initInode(unsigned int index, unsigned char attribute);
+
 #endif //FILESYSTEM_DISKMANAGER_H

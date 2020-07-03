@@ -18,7 +18,7 @@ static std::vector<File> files;
 /*当前路径*/
 static std::string path;
 /*存储命令参数*/
-static std::vector<std::string> vec;
+extern std::vector<std::string> commandLine;
 
 void fileInit();
 
@@ -43,5 +43,9 @@ void write();
 void open();
 
 void ls();
+
+void createNewFile(Inode *node, char *name, bool attribute);
+
+std::vector<std::string> split(const std::string &str, const std::string &delimiter);
 
 #endif //FILESYSTEM_FILEOPERATE_H
