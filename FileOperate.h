@@ -48,7 +48,7 @@ std::vector<std::string> split(const std::string &str, const std::string &delimi
 
 void open(char *name, char op, Inode *inode);
 
-void close(char *name);
+void close(char *name, Inode *inode);
 
 void doAppendWrite(Inode *node);
 

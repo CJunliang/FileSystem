@@ -11,6 +11,13 @@ using namespace std;
 
 vector<string> commandLine;
 vector<string> pathClip;
+sem_t mutex;
+
+void fileInit() {
+    allocMemory();
+    path = "/";
+    sem_init(&mutex, 1, 1);
+}
 
 vector<string> split(const string &str, const string &delimiter) {
     vector<string> res;
@@ -99,11 +106,6 @@ void createNewFile(Inode *node, char *name, bool attribute) {
     if (attribute) {
         addFatherFolder(&inode[fileIndex[index].inode]);
     }
-}
-
-void fileInit() {
-    allocMemory();
-    path = "/";
 }
 
 void pwd() {
@@ -208,7 +210,7 @@ void rmdir() {
                 int j = 0;
                 while (node->dirBlock[j] != -1 && j < 12) {
                     doRmdir(node->dirBlock[j]);
-                    printf("block %d free\n", node->dirBlock[j]);
+//                    printf("block %d free\n", node->dirBlock[j]);
                     blockFree(node->dirBlock[j++]);
                     node->blockCount--;
                 }
@@ -243,7 +245,7 @@ void rm() {
                 memset(fileIndex, 0, sizeof(FileIndex));
                 int j;
                 while (node->dirBlock[j] != -1 && j < 12) {
-                    printf("block %d free\n", node->dirBlock[j]);
+//                    printf("block %d free\n", node->dirBlock[j]);
                     blockFree(node->dirBlock[j++]);
                     node->blockCount--;
                 }
@@ -287,7 +289,7 @@ void doRead(Inode *node) {
                 printf("%c", *(addr + j));
         }
     }
-    printf("#\n");
+    printf("\033[33m#\033[0m\n");
 }
 
 void read() {
@@ -307,7 +309,7 @@ void read() {
         if (!node->attribute) {
             open(name, 'r', node);
             doRead(node);
-            close(name);
+            close(name,node);
         } else {
             printf("read: %s is a directory!\n", name);
             return;
@@ -370,10 +372,10 @@ void write() {
         printf("write: too less arguments!\n");
         return;
     }
-    char *name = new char(commandLine[1].length() + 1);
-    strcpy(name, commandLine[1].c_str());
-    char *option = new char(commandLine[2].length() + 1);
-    strcpy(option, commandLine[2].c_str());
+    char *option = new char(commandLine[1].length() + 1);
+    strcpy(option, commandLine[1].c_str());
+    char *name = new char(commandLine[2].length() + 1);
+    strcpy(name, commandLine[2].c_str());
     unsigned int ino = checkName(&inode[curInodeIndex], name);
     if (ino != (unsigned int) -1) {
         Inode *node = &inode[ino];
@@ -382,11 +384,11 @@ void write() {
             if (strcmp(option, "-a") == 0) {
                 open(name, 'a', node);
                 doAppendWrite(node);
-                close(name);
+                close(name,node);
             } else if (strcmp(option, "-c") == 0) {/*重写*/
                 open(name, 'c', node);
                 doReWrite(node);
-                close(name);
+                close(name,node);
             } else {
                 printf("write: %s is error option!\n", option);
                 return;
@@ -401,23 +403,54 @@ void write() {
     }
 }
 
-void open(char *name, char op, Inode *inode) {
+void open(char *name, char op, Inode *node) {
     File file;
     strcpy(file.fileName, name);
     file.op = op;
-    file.inode = inode;
+    file.inode = node;
     file.pid = getpid();
+    sem_wait(&mutex);
+    switch (op) {
+        case 'r':
+            sem_wait(&node->readMutex);
+            if (node->readCount == 0)
+                sem_wait(&node->writeMutex);
+            node->readCount++;
+            sem_post(&node->readMutex);
+            break;
+        case 'a':
+        case 'c':
+            sem_wait(&node->writeMutex);
+        default:
+            break;
+    }
     filesList.push_back(file);
+    sem_post(&mutex);
 }
 
-void close(char *name) {
+void close(char *name, Inode *node) {
     pid_t pid = getpid();
     vector<File>::iterator it;
+    sem_wait(&mutex);
     for (it = filesList.begin(); it < filesList.end(); it++) {
         if (strcmp(name, it->fileName) == 0 && it->pid == pid) {
+            switch (it->op) {
+                case 'r':
+                    sem_wait(&node->readMutex);
+                    node->readCount--;
+                    if(node->readCount==0)
+                        sem_post(&node->writeMutex);
+                    sem_post(&node->readMutex);
+                case 'a':
+                case 'c':
+                    sem_post(&node->writeMutex);
+                default:
+                    break;
+            }
             filesList.erase(it);
         }
     }
+    sem_post(&mutex);
 }
 
 void rename() {

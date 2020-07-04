@@ -21,7 +21,7 @@ int main() {
     CommandEnum command;
     string line;
     while (flag) {
-        printf(">>>");
+        printf(">>> ");
         getline(cin, line);
         commandLine = split(line, " ");
         command = lookUp(commandLine[0]);
@@ -51,9 +51,6 @@ int main() {
             case LS:
                 ls();
                 break;
-/*            case OPEN:
-                open();
-                break;*/
             case READ:
                 read();
                 break;

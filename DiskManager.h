@@ -5,6 +5,9 @@
 #define FILESYSTEM_DISKMANAGER_H
 
 /*分别是系统大小，盘块大小和盘块数量*/
+#include <semaphore.h>
+#include <pthread.h>
+
 #define KB 1024
 #define MB 1024*1024
 #define DISKSIZE 100*MB
@@ -22,6 +25,9 @@ typedef struct INODE {
     unsigned long ctime;    /*inode上一次变动的时间*/
     unsigned long mtime;    /*文件内容上一次变动的时间*/
     unsigned long atime;    /*文件上一次打开的时间*/
+    sem_t writeMutex;         /*写信号量*/
+    sem_t readMutex;          /*读信号量*/
+    unsigned int readCount;  /*正在读的数量*/
     unsigned int linkCount; /*链接的数量*/
     unsigned int owner;     /*拥有者编号*/
     unsigned int blockCount;    /*使用逻辑块的数量*/
@@ -29,7 +35,7 @@ typedef struct INODE {
     unsigned int inDirBlock;     /*间接块指针*/
     unsigned int dbInDirBlock;  /*双重间接地址*/
     unsigned int triInDirBlock; /*三重间接地址*/
-    unsigned char fill[23];     /*用来填充inode，无实际作用*/
+    unsigned char fill[11];     /*用来填充inode，无实际作用*/
     bool attribute;    /*0文件，1文件夹*/
 } Inode;
 
@@ -86,7 +92,8 @@ extern Inode *inode;
 extern Group *group;
 /*当前目录的inode编号*/
 extern unsigned int curInodeIndex;
-
+/*是否显示inode和block的分配和回收信息*/
+extern bool track;
 /*创建共享内存*/
 void allocMemory();
 

@@ -5,6 +5,7 @@
 #include <sys/shm.h>
 #include <cstdlib>
 #include <ctime>
+#include <semaphore.h>
 #include "DiskManager.h"
 
 /*共享内存的区域*/
@@ -19,7 +20,8 @@ Inode *inode;
 Group *group;
 /*当前目录的inode编号*/
 unsigned int curInodeIndex;
-
+/*是否显示inode和block的分配和回收信息*/
+bool track = true;
 static int shmId;
 static void *shareMemory;
 
@@ -38,6 +40,7 @@ void allocMemory() {
         perror("shmat failed");
         exit(EXIT_FAILURE);
     }
+//    printf("%lu",sizeof(Inode));
     /*设置共享内存*/
     shmSt = (ShareMemoryStruct *) shareMemory;
     if (!shmSt->isInit)
@@ -55,6 +58,9 @@ void initInode(unsigned int index, bool attribute) {
     node->mtime = time(nullptr);
     for (unsigned int &i : node->dirBlock)
         i = -1;
+    sem_init(&node->writeMutex, 1, 1);
+    sem_init(&node->readMutex, 1, 1);
+    node->readCount = 0;
 }
 
 /*获取block地址*/
@@ -68,6 +74,8 @@ unsigned int inodeAlloc() {
     if (superBlock->freeInodeAmt) {
         index = superBlock->inode[superBlock->inodeAmt - superBlock->freeInodeAmt];
         superBlock->freeInodeAmt--;
+        if (track)
+            printf("alloc inode %d\n", index);
         return index;
     }
     printf("No Inode Left!\n");
@@ -78,6 +86,8 @@ unsigned int inodeAlloc() {
 void inodeFree(unsigned int num) {
     superBlock->freeInodeAmt++;
     superBlock->inode[superBlock->inodeAmt - superBlock->freeInodeAmt] = num;
+    if (track)
+        printf("free inode %d\n", num);
 }
 
 /*分配block*/
@@ -87,6 +97,8 @@ unsigned int blockAlloc() {
     if (group->count > 1) {
         index = group->blocks[size - group->count];
         group->count--;
+        if (track)
+            printf("alloc block %d\n", index);
         return index;
     }
     if (group->blocks[size - 1]) {
@@ -94,6 +106,8 @@ unsigned int blockAlloc() {
         group = (Group *) getBlockAddr(superBlock->group);
         index = group->blocks[0];
         group->count--;
+        if (track)
+            printf("alloc block %d\n", index);
         return index;
     }
     printf("No Space Left!\n");
@@ -109,6 +123,8 @@ void blockFree(unsigned int num) {
         superBlock->group -= size;
         group = (Group *) getBlockAddr(superBlock->group);
     }
+    if (track)
+        printf("free block %d\n", num);
 }
 
 /*初始化*/
