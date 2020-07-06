@@ -16,14 +16,17 @@ CommandEnum lookUp(const string &str) {
 }
 
 int main() {
+    /*初始化*/
     fileInit();
     bool flag = true;
     CommandEnum command;
     string line;
     while (flag) {
         printf(">>> ");
+        /*读取命令并切割*/
         getline(cin, line);
         commandLine = split(line, " ");
+        /*寻找切割除的第一个字符串对应的命令*/
         command = lookUp(commandLine[0]);
         switch (command) {
             case EXIT:

@@ -22,6 +22,7 @@ Group *group;
 unsigned int curInodeIndex;
 /*是否显示inode和block的分配和回收信息*/
 bool track = true;
+
 static int shmId;
 static void *shareMemory;
 
@@ -40,7 +41,6 @@ void allocMemory() {
         perror("shmat failed");
         exit(EXIT_FAILURE);
     }
-//    printf("%lu",sizeof(Inode));
     /*设置共享内存*/
     shmSt = (ShareMemoryStruct *) shareMemory;
     if (!shmSt->isInit)
@@ -94,17 +94,22 @@ void inodeFree(unsigned int num) {
 unsigned int blockAlloc() {
     unsigned int index;
     unsigned int size = superBlock->blocksPerGroup;
+    /*该组剩余的空闲物理块大于1*/
     if (group->count > 1) {
         index = group->blocks[size - group->count];
+        superBlock->freeBlockAmt--;
         group->count--;
         if (track)
             printf("alloc block %d\n", index);
         return index;
     }
+    /*该组剩余的空闲物理块等于1，即只剩下指向下一组的链接
+     * 将当前组转换成下一组的组号与位置*/
     if (group->blocks[size - 1]) {
         superBlock->group = group->blocks[size - 1];
         group = (Group *) getBlockAddr(superBlock->group);
         index = group->blocks[0];
+        superBlock->freeBlockAmt--;
         group->count--;
         if (track)
             printf("alloc block %d\n", index);
@@ -119,10 +124,12 @@ void blockFree(unsigned int num) {
     unsigned int size = superBlock->blocksPerGroup;
     group->count++;
     group->blocks[size - group->count] = num;
+    /*当前组的空闲物理块已满，则将组号转为上一组*/
     if (group->count == group->max) {
         superBlock->group -= size;
         group = (Group *) getBlockAddr(superBlock->group);
     }
+    superBlock->freeBlockAmt++;
     if (track)
         printf("free block %d\n", num);
 }
@@ -130,13 +137,12 @@ void blockFree(unsigned int num) {
 /*初始化*/
 void diskInit() {
     unsigned int i, j;
-
     shmSt->isInit = true;
-
+    /*共享内存的地址*/
     baseAddr = reinterpret_cast<unsigned char *>(&shmSt->shm);
     printf("\033[33mLoading FileSystem...\033[0m\n");
+    /*超级块的地址*/
     superBlock = (SuperBlock *) baseAddr;
-
     /*初始化超级块*/
     superBlock->atime = time(nullptr);
     superBlock->diskSize = DISKSIZE;
@@ -178,16 +184,18 @@ void diskInit() {
     printf("\033[32mFileSystem Created!\033[0m\n");
 }
 
+/*加载必要的参数*/
 void load() {
     baseAddr = reinterpret_cast<unsigned char *>(&shmSt->shm);
     printf("\033[33mLoading FileSystem...\033[0m\n");
     superBlock = (SuperBlock *) baseAddr;
-    group = (Group *) getBlockAddr(400);
+    group = (Group *) getBlockAddr(superBlock->group);
     inode = (Inode *) getBlockAddr(13);
     curInodeIndex = superBlock->rootInode;
     printf("\033[32mFileSystem Loaded!\033[0m\n");
 }
 
+/*退出系统，结束共享内存在本进程的挂载映像，删除共享内存区域*/
 void exitSys() {
     if (shmdt(shareMemory) < 0) {
         perror("shmdt fail!\n");
@@ -197,4 +205,5 @@ void exitSys() {
         perror("shmctl fail!\n");
         exit(1);
     }
+    printf("\033[32mFileSystem exited!\033[0m\n");
 }

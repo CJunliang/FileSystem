@@ -15,8 +15,8 @@
 #define BLOCKCOUNT DISKSIZE/BLOCKSIZE
 
 struct ShareMemoryStruct {
-    unsigned char shm[DISKSIZE];
-    bool isInit;
+    unsigned char shm[DISKSIZE];    /*磁盘的大小*/
+    bool isInit;                    /*是否初始化*/
 };
 
 /*Inode节点的大小为128B，存储了文件的一些信息*/
@@ -31,7 +31,7 @@ typedef struct INODE {
     unsigned int linkCount; /*链接的数量*/
     unsigned int owner;     /*拥有者编号*/
     unsigned int blockCount;    /*使用逻辑块的数量*/
-    unsigned int dirBlock[12];  /*文直接块指针*/
+    unsigned int dirBlock[12];  /*直接块指针*/
     unsigned int inDirBlock;     /*间接块指针*/
     unsigned int dbInDirBlock;  /*双重间接地址*/
     unsigned int triInDirBlock; /*三重间接地址*/
@@ -52,7 +52,6 @@ typedef struct SUPERBLOCK {
     unsigned int fileIndexPerBlock; /*每块所包含的文件索引个数*/
     unsigned int fileIndexSize;     /*文件索引的大小*/
     unsigned int rootInode;         /*根目录所在的inode*/
-//    unsigned int inodesPerGroup;  /*每一个块组管理的逻辑块的数量*/
     unsigned int inode[3096];       /*inode节点的个数*/
     unsigned int group;             /*此时正在使用的组号（逻辑好）*/
     unsigned long mtime;            /*超级块被修改的时间*/
@@ -67,7 +66,7 @@ typedef struct BOOT {
     char sysInfo[32];
 } Boot;
 
-/*32B 记录文件名字以及文件的inode*/
+/*32B 记录文件名字以及文件的inode编号*/
 typedef struct INDEX {
     char fileName[28];
     unsigned int inode;
@@ -75,9 +74,9 @@ typedef struct INDEX {
 
 /*1024B */
 typedef struct GROUP {
-    unsigned int blocks[255];   /*一组有*/
-    unsigned short count;       /*空闲盘块号*/
-    unsigned short max;         /*最多空闲盘块号*/
+    unsigned int blocks[255];   /*块号数组*/
+    unsigned short count;       /*空闲盘块*/
+    unsigned short max;         /*最多空闲盘块*/
 } Group;
 
 /*共享内存的区域*/
@@ -94,6 +93,7 @@ extern Group *group;
 extern unsigned int curInodeIndex;
 /*是否显示inode和block的分配和回收信息*/
 extern bool track;
+
 /*创建共享内存*/
 void allocMemory();
 
@@ -120,5 +120,7 @@ void load();
 /*初始化inode*/
 void initInode(unsigned int index, bool attribute);
 
+/*退出系统，结束共享内存在本进程的挂载映像，删除共享内存区域*/
 void exitSys();
+
 #endif //FILESYSTEM_DISKMANAGER_H
